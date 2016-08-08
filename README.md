@@ -16,3 +16,7 @@ compress mp4 file faster
   3、frame不再每次都alloc、free。<br>
   4、去掉codec每一个frame时都在print的log。<br>
   5、缩小fps到film级别（24）。这项尚未完成，正在努力中。
+
+# 交流
+这个工具应该使用范围挺广的，发布上来的主要目的，是希望有人能提出更多的优化意见，共同进步。<br>
+随时欢迎邮件交流。345017062@qq.com<br>
