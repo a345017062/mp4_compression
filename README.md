@@ -15,7 +15,8 @@ compress mp4 file faster
   2、去除filter。<br>
   3、frame不再每次都alloc、free。<br>
   4、去掉codec每一个frame时都在print的log。<br>
-  5、缩小fps到film级别（24）。这项尚未完成，正在努力中。
+  5、缩小fps到film级别（24）。这项尚未完成，正在努力中。<br>
+  6、x264参数调配对编码速度、压缩率的影响。
 
 # 交流
 这个工具应该使用范围挺广的，发布上来的主要目的，是希望有人能提出更多的优化意见，共同进步。<br>
