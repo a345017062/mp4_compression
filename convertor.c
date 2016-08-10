@@ -1,4 +1,3 @@
-
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/avutil.h"
@@ -71,6 +70,14 @@ static int open_output_file(const char *filename)
         av_log(NULL, AV_LOG_ERROR, "Could not create output context\n");
         return AVERROR_UNKNOWN;
     }
+    
+    if (av_opt_find(ofmt_ctx,"flush_packets",NULL,0,0)) {
+        ret = av_opt_set_int(ofmt_ctx, "flush_packets", 1, 0);//设置流程中规定，最大值为1.
+        if (ret < 0) {
+            
+        }
+    }
+    
     for (i = 0; i < ifmt_ctx->nb_streams; i++) {
         out_stream = avformat_new_stream(ofmt_ctx, NULL);
         if (!out_stream) {
@@ -93,22 +100,25 @@ static int open_output_file(const char *filename)
             /* video time_base can be set to whatever is handy and supported by encoder */
             enc_ctx->time_base = dec_ctx->time_base;
             
-            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+            //这段代码要放到avcodec_open2前面，否则finder中无法解析出视频缩略图。
+            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER){//AV_CODEC_FLAG_LOOP_FILTER,AV_CODEC_FLAG_PASS1,AV_CODEC_FLAG_PASS2,AV_CODEC_FLAG_PSNR,AV_CODEC_FLAG_INTERLACED_DCT,AV_CODEC_FLAG_CLOSED_GOP,
                 enc_ctx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            }
             
             AVDictionary* optionsDict = NULL;
-            av_dict_set_int(&optionsDict, "crf", 26, 0);
+            av_dict_set_int(&optionsDict, "crf", 26, 0);//默认取值23，范围0~51，该值越大，压缩后视频的质量越差，速度越快。
 //            av_dict_set_int(&optionsDict, "fastfirstpass", 1, 0);//默认就是1
             av_dict_set(&optionsDict, "level", "31", 0);//取值不要高于源的level，否则无意义。有关level，请参考这篇文章：http://www.cnblogs.com/zyl910/archive/2011/12/08/h264_level.html
+            //下面几个x264内部参数，调整一下可以改变压缩后视频的编码速度、码率，有些参数对码率影响明显。但整体对编码速度的影响不明显。
+//            av_dict_set(&optionsDict, "profile", "main", 0);//baseline,high,high10,high422,high444,main
+//            av_dict_set(&optionsDict, "tune", "film", 0);//film,animation,grain,stillimage,psnr,ssim,fastdecode,zerolantency
+//            av_dict_set(&optionsDict, "preset", "fast", 0);//ultrafast,superfast,veryfast,faster,fast,medium,slow,slower,veryslow,placebo
             ret = avcodec_open2(enc_ctx, encoder, &optionsDict);
             av_dict_free(&optionsDict);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR, "Cannot open video encoder for stream #%u\n", i);
                 return ret;
             }
-            //这段代码要放到avcodec_open2前面去，否则finder中无法解析出视频缩略图。
-            //            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-            //                enc_ctx->flags |= CODEC_FLAG_GLOBAL_HEADER;
         }else if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
             encoder = avcodec_find_encoder_by_name("libfaac");
             enc_ctx = avcodec_alloc_context3(encoder);
@@ -122,7 +132,7 @@ static int open_output_file(const char *filename)
             AVRational time_base={1, enc_ctx->sample_rate};
             enc_ctx->time_base = time_base;
             
-            //这段代码要放到avcodec_open2前面去，否则无法使用libfaac进行encode。
+            //这段代码要放到avcodec_open2前面，否则无法使用libfaac进行encode。
             if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER){
                 enc_ctx->flags |= CODEC_FLAG_GLOBAL_HEADER;
             }
